@@ -2,53 +2,49 @@ package diff
 
 import "sort"
 
-// SecretData represents a map of key-value pairs from a Vault secret version.
-type SecretData map[string]interface{}
-
-// ChangeType describes the kind of change detected for a key.
-type ChangeType string
+// Status represents the change state of a single secret key.
+type Status string
 
 const (
-	Added    ChangeType = "added"
-	Removed  ChangeType = "removed"
-	Modified ChangeType = "modified"
-	Unchanged ChangeType = "unchanged"
+	StatusAdded     Status = "added"
+	StatusRemoved   Status = "removed"
+	StatusModified  Status = "modified"
+	StatusUnchanged Status = "unchanged"
 )
 
-// DiffEntry represents a single key-level difference between two secret versions.
-type DiffEntry struct {
+// Entry holds the diff result for a single key.
+type Entry struct {
 	Key      string
-	Change   ChangeType
-	OldValue interface{}
-	NewValue interface{}
+	Status   Status
+	OldValue string
+	NewValue string
 }
 
-// Compare computes the diff between two SecretData maps and returns a sorted
-// slice of DiffEntry values describing each key's change status.
-func Compare(old, new SecretData) []DiffEntry {
-	keys := unionKeys(old, new)
+// Compare produces a sorted slice of Entry values by comparing two secret maps.
+func Compare(before, after map[string]string) []Entry {
+	keys := unionKeys(before, after)
 	sort.Strings(keys)
 
-	entries := make([]DiffEntry, 0, len(keys))
+	entries := make([]Entry, 0, len(keys))
 	for _, k := range keys {
-		oldVal, inOld := old[k]
-		newVal, inNew := new[k]
+		oldVal, inBefore := before[k]
+		newVal, inAfter := after[k]
 
-		var change ChangeType
+		var status Status
 		switch {
-		case inOld && !inNew:
-			change = Removed
-		case !inOld && inNew:
-			change = Added
-		case fmt(oldVal) != fmt(newVal):
-			change = Modified
+		case inBefore && !inAfter:
+			status = StatusRemoved
+		case !inBefore && inAfter:
+			status = StatusAdded
+		case oldVal != newVal:
+			status = StatusModified
 		default:
-			change = Unchanged
+			status = StatusUnchanged
 		}
 
-		entries = append(entries, DiffEntry{
+		entries = append(entries, Entry{
 			Key:      k,
-			Change:   change,
+			Status:   status,
 			OldValue: oldVal,
 			NewValue: newVal,
 		})
@@ -56,17 +52,17 @@ func Compare(old, new SecretData) []DiffEntry {
 	return entries
 }
 
-// HasChanges returns true if any entry in the diff is not Unchanged.
-func HasChanges(entries []DiffEntry) bool {
+// HasChanges returns true if any entry is not StatusUnchanged.
+func HasChanges(entries []Entry) bool {
 	for _, e := range entries {
-		if e.Change != Unchanged {
+		if e.Status != StatusUnchanged {
 			return true
 		}
 	}
 	return false
 }
 
-func unionKeys(a, b SecretData) []string {
+func unionKeys(a, b map[string]string) []string {
 	seen := make(map[string]struct{}, len(a)+len(b))
 	for k := range a {
 		seen[k] = struct{}{}
@@ -79,16 +75,4 @@ func unionKeys(a, b SecretData) []string {
 		keys = append(keys, k)
 	}
 	return keys
-}
-
-func fmt(v interface{}) string {
-	if v == nil {
-		return ""
-	}
-	switch val := v.(type) {
-	case string:
-		return val
-	default:
-		return string(rune(0)) // force non-equal for non-string types that differ
-	}
 }
