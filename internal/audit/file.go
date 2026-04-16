@@ -28,6 +28,11 @@ func OpenFileLogger(path string) (*FileLogger, error) {
 
 // Close flushes and closes the underlying file.
 func (fl *FileLogger) Close() error {
+	if err := fl.f.Sync(); err != nil {
+		// Still attempt to close even if sync fails.
+		_ = fl.f.Close()
+		return fmt.Errorf("audit: sync log file: %w", err)
+	}
 	return fl.f.Close()
 }
 
