@@ -6,15 +6,32 @@ import (
 )
 
 func main() {
-	cfg, err := ParseFlags(os.Args[1:])
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		fmt.Fprintln(os.Stderr, "Usage: vaultdiff -addr <url> -token <tok> -path <secret-path> [options]")
+	if len(os.Args) < 2 {
+		fmt.Fprintln(os.Stderr, "usage: vaultdiff <command> [flags]")
+		fmt.Fprintln(os.Stderr, "commands: diff, versions, filter, export, summary, watch")
 		os.Exit(1)
 	}
-
-	if err := Run(cfg, os.Stdout); err != nil {
-		fmt.Fprintf(os.Stderr, "vaultdiff: %v\n", err)
+	cmd, args := os.Args[1], os.Args[2:]
+	var err error
+	switch cmd {
+	case "diff":
+		err = Run(args)
+	case "versions":
+		err = RunListVersions(args)
+	case "filter":
+		err = RunFilteredDiff(args)
+	case "export":
+		err = RunExport(args)
+	case "summary":
+		err = RunSummary(args)
+	case "watch":
+		err = RunWatch(args)
+	default:
+		fmt.Fprintf(os.Stderr, "unknown command: %s\n", cmd)
+		os.Exit(1)
+	}
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }
