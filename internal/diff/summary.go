@@ -42,3 +42,9 @@ func (s Summary) String() string {
 func (s Summary) HasDrift() bool {
 	return s.Added > 0 || s.Removed > 0 || s.Modified > 0
 }
+
+// DriftCount returns the total number of keys that differ between the two
+// sources (i.e. the sum of added, removed, and modified counts).
+func (s Summary) DriftCount() int {
+	return s.Added + s.Removed + s.Modified
+}
