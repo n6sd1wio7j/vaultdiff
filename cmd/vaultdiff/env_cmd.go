@@ -4,12 +4,15 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/yourusername/vaultdiff/internal/diff"
 	"github.com/yourusername/vaultdiff/internal/vault"
 )
 
 // RunEnvDiff compares the same secret path across two Vault environments.
+// It reads the secret at the given path from both Vault instances and prints
+// a diff of the key-value pairs, optionally ignoring keys by prefix.
 func RunEnvDiff(args []string) error {
 	fs := flag.NewFlagSet("env", flag.ContinueOnError)
 
@@ -48,19 +51,21 @@ func RunEnvDiff(args []string) error {
 		return fmt.Errorf("client B: %w", err)
 	}
 
-	secretsA, err := clientA.ReadSecretVersion(*path, *versionA)
+	secrets A, err := clientA.ReadSecretVersion(*path, *versionA)
 	if err != nil {
-		return fmt.Errorf("read env A: %w", err)
+		return fmt.Errorf("read env A (%s): %w", *addrA, err)
 	}
-	secretsB, err := clientB.ReadSecretVersion(*path, *versionB)
+	secrets B, err := clientB.ReadSecretVersion(*path, *versionB)
 	if err != nil {
-		return fmt.Errorf("read env B: %w", err)
+		return fmt.Errorf("read env B (%s): %w", *addrB, err)
 	}
 
 	var ignorePrefixes []string
 	if *ignore != "" {
-		for _, p := range splitComma(*ignore) {
-			ignorePrefixes = append(ignorePrefixes, p)
+		for _, p := range strings.Split(*ignore, ",") {
+			if trimmed := strings.TrimSpace(p); trimmed != "" {
+				ignorePrefixes = append(ignorePrefixes, trimmed)
+			}
 		}
 	}
 
