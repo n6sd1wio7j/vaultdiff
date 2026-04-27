@@ -84,3 +84,13 @@ func FormatLint(violations []LintViolation) string {
 	}
 	return sb.String()
 }
+
+// ViolationsByRule groups lint violations by rule name, returning a map
+// of rule name to the list of violations that matched that rule.
+func ViolationsByRule(violations []LintViolation) map[string][]LintViolation {
+	result := make(map[string][]LintViolation)
+	for _, v := range violations {
+		result[v.Rule] = append(result[v.Rule], v)
+	}
+	return result
+}
